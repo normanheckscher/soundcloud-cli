@@ -38,7 +38,7 @@ def command_auth(args):
     settings.user         = me.obj
     settings.user['name'] = me.username
     settings.save()
-    print 'authenticated as {0}.'.format(me.username)
+    print 'authenticated as {0}.'.format(me.username.encode('utf-8'))
 
 
 def command_defaults(args):
