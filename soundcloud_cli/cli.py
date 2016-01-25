@@ -89,6 +89,37 @@ def command_list(args):
 
 
 @utils.require_auth
+def command_group(args):
+    from .api.groups import group
+    from .api.client import get_client
+
+    client   = get_client()
+    username = args.username
+
+    if not username:
+        user_id  = settings.user.get('id')
+        username = settings.user.get('name')
+    else:
+        user = settings.users.get(username, None)
+        if user:
+            user_id  = user['id']
+        else:
+            user = client.get('/resolve', url='https://soundcloud.com/{0}'.format(username))
+            user_id = user.id
+
+    groups = group(user_id)
+
+    # find longest title to build formatting string
+    #group_len = max(len(g.group) for g in groups)
+    group_len = 8
+    format_spec = "  {{0:<{0}}} {{1}}".format(group_len + 2)
+
+    print 'groups of {0}:'.format(username.encode('utf-8'))
+    for group in groups:
+        print format_spec.format(group.id, group.permalink_url)
+
+
+@utils.require_auth
 def command_share(args):
     from .api.share import share
 
@@ -176,6 +207,10 @@ def main():
     list_parser = subparsers.add_parser('list', help='list tracks for given user')
     list_parser.add_argument('username', nargs='?', help='key')
     list_parser.set_defaults(command=command_list)
+
+    group_parser = subparsers.add_parser('group', help='list groups for given user')
+    group_parser.add_argument('username', nargs='?', help='key')
+    group_parser.set_defaults(command=command_group)
 
     share_parser = subparsers.add_parser('share', help='share track with users')
     share_parser.add_argument('track_url', help='track you want to share')
