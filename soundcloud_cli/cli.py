@@ -1,20 +1,13 @@
-from __future__ import unicode_literals
-
 import os
 import sys
 
 from . import settings, utils
 
-try:
-    input = raw_input
-except NameError:
-    pass
-
 
 def print_shared_with(users):
-    print('shared with:')
+    print 'shared with:'
     for user in users:
-        print('  {0} ({0})'.format(user.permalink, user.permalink_url))
+        print '  {0} ({0})'.format(user.permalink, user.permalink_url)
 
 
 def command_auth(args):
@@ -27,7 +20,7 @@ def command_auth(args):
         username = getpass.getuser()
 
     # read username
-    user_input = input('enter username ({0}): '.format(username))
+    user_input = raw_input(u'enter username ({0}): '.format(username.decode('utf-8')))
     if user_input:
         username = user_input
 
@@ -45,7 +38,7 @@ def command_auth(args):
     settings.user         = me.obj
     settings.user['name'] = me.username
     settings.save()
-    print('authenticated as {0}.'.format(me.username))
+    print 'authenticated as {0}.'.format(me.username.encode('utf-8'))
 
 
 def command_defaults(args):
@@ -62,7 +55,7 @@ def command_defaults(args):
 
     settings.defaults[key] = value
     settings.save()
-    print('set {0} = {1}'.format(key, unicode(value)))
+    print 'set {0} = {1}'.format(key, str(value))
 
 
 @utils.require_auth
@@ -88,11 +81,64 @@ def command_list(args):
 
     # find longest title to build formatting string
     title_len = max(len(t.title) for t in tracks)
-    format_spec = "  {{0:<{0}}} {{1}}".format(title_len + 2)
+    format_spec = "  {{0:<{0}}} {{1}} {{2}}".format(title_len + 2)
 
-    print('tracks by {0}:'.format(username))
+    print 'tracks by {0}:'.format(username.encode('utf-8'))
     for track in tracks:
-        print(format_spec.format(track.title, track.permalink_url))
+        print format_spec.format(track.title, track.permalink_url, track.id)
+
+
+@utils.require_auth
+def command_group(args):
+    from .api.groups import group
+    from .api.client import get_client
+
+    client   = get_client()
+    username = args.username
+
+    if not username:
+        user_id  = settings.user.get('id')
+        username = settings.user.get('name')
+    else:
+        user = settings.users.get(username, None)
+        if user:
+            user_id  = user['id']
+        else:
+            user = client.get('/resolve', url='https://soundcloud.com/{0}'.format(username))
+            user_id = user.id
+
+    groups = group(user_id)
+
+    # find longest title to build formatting string
+    #group_len = max(len(g.group) for g in groups)
+    group_len = 8
+    format_spec = "  {{0:<{0}}} {{1}}".format(group_len + 2)
+
+    print 'groups of {0}:'.format(username.encode('utf-8'))
+    for group in groups:
+        print format_spec.format(group.id, group.permalink_url)
+
+
+@utils.require_auth
+def command_groupshare(args):
+    from .api.groupshare import groupshare
+
+    print args
+
+    if args.track_id:
+        tracks = [t.strip() for t in args.track_id.split(',')]
+    else:
+        tracks = []
+
+    if args.group_id:
+        groups = [g.strip() for g in args.group_id.split(',')]
+    else:
+        groups = []
+
+    for group in groups:
+        for track in tracks:
+            groupshare(group,track)
+            print 'track %s has been shared with group %s' % (track,group)
 
 
 @utils.require_auth
@@ -147,7 +193,7 @@ def command_upload(args):
 
     url = res['permalink_url']
 
-    print(url)
+    print url
     utils.open_browser(url)
     utils.copy_to_clipboard(url)
 
@@ -165,7 +211,7 @@ def command_upload(args):
 def main():
     import argparse
 
-    from .__init__ import __version__
+    from __init__ import __version__
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
@@ -183,6 +229,15 @@ def main():
     list_parser = subparsers.add_parser('list', help='list tracks for given user')
     list_parser.add_argument('username', nargs='?', help='key')
     list_parser.set_defaults(command=command_list)
+
+    group_parser = subparsers.add_parser('group', help='list groups for given user')
+    group_parser.add_argument('username', nargs='?', help='key')
+    group_parser.set_defaults(command=command_group)
+
+    groupshare_parser = subparsers.add_parser('groupshare', help='share track to group for given user')
+    groupshare_parser.add_argument('group_id', nargs='?', help='group you want to share track with')
+    groupshare_parser.add_argument('track_id', nargs='?', help='track you want to share')
+    groupshare_parser.set_defaults(command=command_groupshare)
 
     share_parser = subparsers.add_parser('share', help='share track with users')
     share_parser.add_argument('track_url', help='track you want to share')
@@ -210,7 +265,7 @@ def main():
 
     # default to upload command
     if sys.argv[1:]:
-        choices = list(subparsers.choices.keys())
+        choices = subparsers.choices.keys()
         choices += ['-h', '--help', '-v', '--version']
 
         # unless recognized command is passed, treat first argument as file to upload
@@ -220,13 +275,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        cmd = args.command
-    except AttributeError:
-        parser.print_help()
-        return
-
-    try:
-        cmd(args)
+        args.command(args)
     except KeyboardInterrupt:
-        print('')
+        print
         sys.exit(1)
