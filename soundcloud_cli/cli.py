@@ -83,7 +83,7 @@ def command_list(args):
     title_len = max(len(t.title) for t in tracks)
     format_spec = "  {{0:<{0}}} {{1}}".format(title_len + 2)
 
-    print 'tracks by {0}:'.format(username)
+    print 'tracks by {0}:'.format(username.encode('utf-8'))
     for track in tracks:
         print format_spec.format(track.title, track.permalink_url)
 
