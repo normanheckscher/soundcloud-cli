@@ -81,11 +81,11 @@ def command_list(args):
 
     # find longest title to build formatting string
     title_len = max(len(t.title) for t in tracks)
-    format_spec = "  {{0:<{0}}} {{1}}".format(title_len + 2)
+    format_spec = "  {{0:<{0}}} {{1}} {{2}}".format(title_len + 2)
 
     print 'tracks by {0}:'.format(username.encode('utf-8'))
     for track in tracks:
-        print format_spec.format(track.title, track.permalink_url)
+        print format_spec.format(track.title, track.permalink_url, track.id)
 
 
 @utils.require_auth
