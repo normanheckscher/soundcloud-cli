@@ -120,6 +120,30 @@ def command_group(args):
 
 
 @utils.require_auth
+def command_groupshare(args):
+    from .api.groupshare import groupshare
+
+    print args
+
+    if args.group_id:
+        groups = [g.strip() for g in args.group_id.split(',')]
+    else:
+        groups = []
+
+    if args.track_id:
+        tracks = [t.strip() for t in args.track_id.split(',')]
+    else:
+        tracks = []
+
+    print groups
+    print tracks
+    for group in groups:
+        for track in tracks:
+            groupshare(group,track)
+            print 'track %s has been shared with group %s' % (track,group)
+
+
+@utils.require_auth
 def command_share(args):
     from .api.share import share
 
@@ -211,6 +235,11 @@ def main():
     group_parser = subparsers.add_parser('group', help='list groups for given user')
     group_parser.add_argument('username', nargs='?', help='key')
     group_parser.set_defaults(command=command_group)
+
+    groupshare_parser = subparsers.add_parser('groupshare', help='share track to group for given user')
+    groupshare_parser.add_argument('track_id', nargs='?', help='track you want to share')
+    groupshare_parser.add_argument('group_id', nargs='?', help='group you want to share track with')
+    groupshare_parser.set_defaults(command=command_groupshare)
 
     share_parser = subparsers.add_parser('share', help='share track with users')
     share_parser.add_argument('track_url', help='track you want to share')
